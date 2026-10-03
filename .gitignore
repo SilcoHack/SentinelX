@@ -12,3 +12,4 @@ env/
 *.backup
 *.swp
 cikti_*.log
+__pycache__/
