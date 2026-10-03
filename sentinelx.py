@@ -27,9 +27,9 @@ BANNER=f"""{C.CYAN}{C.BOLD}
 
 def clear(): os.system("cls" if os.name=="nt" else "clear")
 def header(t):
-    print(f"\n{C.CYAN}{'═'*62}{C.RESET}")
-    print(f"{C.BOLD}{C.WHITE}  ▶  {t}{C.RESET}")
-    print(f"{C.CYAN}{'═'*62}{C.RESET}\n")
+    print(f"\n{C.CYAN}{'='*62}{C.RESET}")
+    print(f"{C.BOLD}{C.WHITE}  >  {t}{C.RESET}")
+    print(f"{C.CYAN}{'='*62}{C.RESET}\n")
 def info(m): print(f"{C.BLUE}[i]{C.RESET} {m}")
 def ok(m):   print(f"{C.GREEN}[+]{C.RESET} {m}")
 def warn(m): print(f"{C.YELLOW}[!]{C.RESET} {m}")
@@ -38,7 +38,7 @@ def prompt(msg):
     try: return input(f"{C.MAGENTA}[{USER_NAME}]{C.RESET} {msg}: ").strip()
     except (KeyboardInterrupt, EOFError): print(); return ""
 def pause():
-    try: input(f"\n{C.DIM}Devam için Enter...{C.RESET}")
+    try: input(f"\n{C.DIM}Devam icin Enter...{C.RESET}")
     except (KeyboardInterrupt, EOFError): print()
 def is_ip(s):
     try: ipaddress.ip_address(s); return True
@@ -62,34 +62,34 @@ def _scan_port(host,port,timeout):
 def mod_port_scanner():
     header("Port Scanner")
     target=prompt("Hedef (IP / domain)")
-    if not target: warn("Hedef boş."); return
+    if not target: warn("Hedef bos."); return
     try: ip=socket.gethostbyname(target)
-    except socket.gaierror: err("Çözümlenemedi."); return
-    info(f"Hedef → {target} ({ip})")
-    print(f"{C.DIM}  [1] Yaygın  [2] Aralık  [3] Tüm (1-65535){C.RESET}")
-    ch=prompt("Seçim [1]") or "1"
+    except socket.gaierror: err("Cozumlenemedi."); return
+    info(f"Hedef -> {target} ({ip})")
+    print(f"{C.DIM}  [1] Yaygin  [2] Aralik  [3] Tum (1-65535){C.RESET}")
+    ch=prompt("Secim [1]") or "1"
     if ch=="1": ports=sorted(COMMON_PORTS.keys())
     elif ch=="2":
-        rng=prompt("Aralık (örn 1-1000)")
+        rng=prompt("Aralik (orn 1-1000)")
         try: a,b=rng.split("-"); ports=list(range(int(a),int(b)+1))
-        except Exception: err("Geçersiz."); return
+        except Exception: err("Gecersiz."); return
     elif ch=="3": ports=list(range(1,65536))
-    else: err("Geçersiz."); return
+    else: err("Gecersiz."); return
     try: timeout=float(prompt("Timeout sn [0.5]") or "0.5")
     except ValueError: timeout=0.5
     try: workers=int(prompt("Thread [200]") or "200")
     except ValueError: workers=200
-    ok(f"{len(ports)} port taranıyor..."); start=time.time(); open_ports=[]
+    ok(f"{len(ports)} port taraniyor..."); start=time.time(); open_ports=[]
     with ThreadPoolExecutor(max_workers=workers) as ex:
         futures=[ex.submit(_scan_port,ip,p,timeout) for p in ports]
         for fut in as_completed(futures):
             p,is_open=fut.result()
             if is_open:
                 svc=COMMON_PORTS.get(p,"?"); open_ports.append((p,svc))
-                print(f"  {C.GREEN}[AÇIK]{C.RESET} Port {C.BOLD}{p:<6}{C.RESET} {C.DIM}{svc}{C.RESET}")
+                print(f"  {C.GREEN}[ACIK]{C.RESET} Port {C.BOLD}{p:<6}{C.RESET} {C.DIM}{svc}{C.RESET}")
     print()
-    if open_ports: ok(f"{len(open_ports)} açık port. ({time.time()-start:.2f}s)")
-    else: warn(f"Açık port yok. ({time.time()-start:.2f}s)")
+    if open_ports: ok(f"{len(open_ports)} acik port. ({time.time()-start:.2f}s)")
+    else: warn(f"Acik port yok. ({time.time()-start:.2f}s)")
 
 def mod_dns_lookup():
     header("DNS Lookup")
@@ -98,12 +98,12 @@ def mod_dns_lookup():
     if is_ip(t):
         try:
             host,aliases,ips=socket.gethostbyaddr(t)
-            ok(f"PTR → {host}")
+            ok(f"PTR -> {host}")
             if aliases: info(f"Aliases: {', '.join(aliases)}")
             for i in ips: info(f"IP: {i}")
-        except Exception as e: err(f"Reverse başarısız: {e}")
+        except Exception as e: err(f"Reverse basarisiz: {e}")
         return
-    try: ip=socket.gethostbyname(t); ok(f"A → {ip}")
+    try: ip=socket.gethostbyname(t); ok(f"A -> {ip}")
     except socket.gaierror as e: err(f"A yok: {e}"); return
     try:
         host,aliases,ips=socket.gethostbyname_ex(t)
@@ -126,13 +126,13 @@ def _whois_query(server,query,port=43,timeout=6):
 
 def mod_whois():
     header("WHOIS Lookup")
-    d=prompt("Domain (örn example.com)").lower()
+    d=prompt("Domain (orn example.com)").lower()
     if not d: return
     d=urllib.parse.urlparse(d if "://" in d else "http://"+d).netloc or d
     d=d.split("/")[0].split(":")[0]
-    info("IANA sorgulanıyor...")
+    info("IANA sorgulaniyor...")
     iana=_whois_query("whois.iana.org",d)
-    if not iana: err("IANA yanıt vermedi."); return
+    if not iana: err("IANA yanit vermedi."); return
     refer=None
     for line in iana.splitlines():
         if line.lower().startswith("refer:"): refer=line.split(":",1)[1].strip(); break
@@ -140,8 +140,8 @@ def mod_whois():
         info(f"WHOIS: {refer}")
         result=_whois_query(refer,d)
         if result:
-            print(f"\n{C.DIM}{'─'*62}{C.RESET}"); print(result)
-            print(f"{C.DIM}{'─'*62}{C.RESET}")
+            print(f"\n{C.DIM}{'-'*62}{C.RESET}"); print(result)
+            print(f"{C.DIM}{'-'*62}{C.RESET}")
         else: warn("Detay yok, IANA:"); print(iana)
     else: print(iana)
 
@@ -154,7 +154,7 @@ SUBDOMAINS=["www","mail","ftp","webmail","smtp","pop","imap","ns1","ns2","ns3",
 
 def mod_subdomain():
     header("Subdomain Enumeration")
-    d=prompt("Domain (örn example.com)").lower().strip()
+    d=prompt("Domain (orn example.com)").lower().strip()
     if not d: return
     info(f"{len(SUBDOMAINS)} subdomain deneniyor...")
     def check(sub):
@@ -166,10 +166,10 @@ def mod_subdomain():
         for res in ex.map(check,SUBDOMAINS):
             if res:
                 found.append(res)
-                print(f"  {C.GREEN}[+]{C.RESET} {res[0]} → {C.CYAN}{res[1]}{C.RESET}")
+                print(f"  {C.GREEN}[+]{C.RESET} {res[0]} -> {C.CYAN}{res[1]}{C.RESET}")
     print()
     if found: ok(f"{len(found)} subdomain.")
-    else: warn("Sonuç yok.")
+    else: warn("Sonuc yok.")
 
 def mod_banner_grab():
     header("Banner Grabber")
@@ -178,7 +178,7 @@ def mod_banner_grab():
     try: port=int(prompt("Port [80]") or "80")
     except ValueError: port=80
     try: ip=socket.gethostbyname(t)
-    except socket.gaierror: err("Çözümlenemedi."); return
+    except socket.gaierror: err("Cozumlenemedi."); return
     try:
         with socket.socket(socket.AF_INET,socket.SOCK_STREAM) as s:
             s.settimeout(6); s.connect((ip,port))
@@ -192,15 +192,15 @@ def mod_banner_grab():
                     data+=chunk
             except socket.timeout: pass
         if data:
-            print(f"\n{C.DIM}{'─'*62}{C.RESET}")
+            print(f"\n{C.DIM}{'-'*62}{C.RESET}")
             print(data.decode(errors="ignore"))
-            print(f"{C.DIM}{'─'*62}{C.RESET}")
-        else: warn("Banner alınamadı.")
+            print(f"{C.DIM}{'-'*62}{C.RESET}")
+        else: warn("Banner alinamadi.")
     except Exception as e: err(f"Hata: {e}")
 
 def mod_http_headers():
     header("HTTP Header Analyzer")
-    url=prompt("URL (örn https://example.com)")
+    url=prompt("URL (orn https://example.com)")
     if not url: return
     if not url.startswith(("http://","https://")): url="http://"+url
     try:
@@ -208,23 +208,23 @@ def mod_http_headers():
             headers={"User-Agent":f"SentinelX/{VERSION}"})
         with urllib.request.urlopen(req,timeout=10) as r:
             ok(f"Durum: {r.status} {r.reason}")
-            print(f"\n{C.DIM}{'─'*62}{C.RESET}")
+            print(f"\n{C.DIM}{'-'*62}{C.RESET}")
             for k,v in r.headers.items(): print(f"  {C.CYAN}{k}:{C.RESET} {v}")
-            print(f"{C.DIM}{'─'*62}{C.RESET}")
+            print(f"{C.DIM}{'-'*62}{C.RESET}")
             sec=["Strict-Transport-Security","Content-Security-Policy",
                  "X-Frame-Options","X-Content-Type-Options",
                  "Referrer-Policy","Permissions-Policy"]
             hl={k.lower():v for k,v in r.headers.items()}
-            print(f"\n{C.BOLD}Güvenlik Başlıkları:{C.RESET}")
+            print(f"\n{C.BOLD}Guvenlik Basliklari:{C.RESET}")
             for h in sec:
                 if h.lower() in hl: ok(h)
-                else: warn(f"{h} → eksik")
+                else: warn(f"{h} -> eksik")
     except urllib.error.HTTPError as e: err(f"HTTP {e.code}: {e.reason}")
     except Exception as e: err(f"Hata: {e}")
 
 def mod_ssl_cert():
     header("SSL Certificate Inspector")
-    host=prompt("Host (örn example.com)")
+    host=prompt("Host (orn example.com)")
     if not host: return
     try: port=int(prompt("Port [443]") or "443")
     except ValueError: port=443
@@ -236,7 +236,7 @@ def mod_ssl_cert():
                 cert=ss.getpeercert(); version=ss.version()
                 cipher=ss.cipher(); verified=True
     except ssl.SSLCertVerificationError as e:
-        warn(f"Doğrulama hatası: {getattr(e,'verify_message',e)}")
+        warn(f"Dogrulama hatasi: {getattr(e,'verify_message',e)}")
         try:
             ctx=ssl.create_default_context(); ctx.check_hostname=False
             ctx.verify_mode=ssl.CERT_NONE
@@ -244,7 +244,7 @@ def mod_ssl_cert():
                 with ctx.wrap_socket(sock,server_hostname=host) as ss:
                     version=ss.version(); cipher=ss.cipher()
                     der=ss.getpeercert(binary_form=True)
-                    info(f"DER alındı ({len(der)} bayt), doğrulama kapalı.")
+                    info(f"DER alindi ({len(der)} bayt), dogrulama kapali.")
         except Exception as e2: err(f"Hata: {e2}"); return
     except Exception as e: err(f"Hata: {e}"); return
     print()
@@ -256,7 +256,7 @@ def mod_ssl_cert():
         print(f"\n{C.BOLD}Sertifika:{C.RESET}")
         print(f"  Subject  : {subj.get('commonName','?')}")
         print(f"  Issuer   : {iss.get('organizationName',iss.get('commonName','?'))}")
-        print(f"  Geçerlilik: {cert.get('notBefore','?')} → {cert.get('notAfter','?')}")
+        print(f"  Gecerlilik: {cert.get('notBefore','?')} -> {cert.get('notAfter','?')}")
         sans=cert.get("subjectAltName",())
         if sans:
             names=[s[1] for s in sans[:15]]
@@ -272,7 +272,7 @@ DIRS=["admin","login","wp-admin","administrator","phpmyadmin","backup",
 
 def mod_dir_scan():
     header("Directory / File Scanner")
-    url=prompt("URL (örn https://example.com)").rstrip("/")
+    url=prompt("URL (orn https://example.com)").rstrip("/")
     if not url: return
     if not url.startswith(("http://","https://")): url="http://"+url
     try: workers=int(prompt("Thread [20]") or "20")
@@ -297,8 +297,8 @@ def mod_dir_scan():
                 found.append(res)
                 print(f"  {color}[{status}]{C.RESET} {full}")
     print()
-    if found: ok(f"{len(found)} sonuç.")
-    else: warn("Sonuç yok.")
+    if found: ok(f"{len(found)} sonuc.")
+    else: warn("Sonuc yok.")
 
 def mod_hash_gen():
     header("Hash Generator")
@@ -328,45 +328,45 @@ WORDLIST=["123456","password","12345678","qwerty","123456789","12345","1234",
 "changeme","secret","default"]
 
 def mod_hash_crack():
-    header("Hash Cracker (Sözlük)")
+    header("Hash Cracker (Sozluk)")
     target=prompt("Hash").lower()
     if not target: return
     lengths={32:"md5",40:"sha1",56:"sha224",64:"sha256",96:"sha384",128:"sha512"}
     algo=lengths.get(len(target))
     algos=[algo] if algo else ["md5","sha1","sha256","sha512"]
-    if not algo: warn("Uzunluk tanınmadı, birden fazla denenecek.")
-    ok(f"{len(WORDLIST)} kelime × {len(algos)} algo...")
+    if not algo: warn("Uzunluk taninmadi, birden fazla denenecek.")
+    ok(f"{len(WORDLIST)} kelime x {len(algos)} algo...")
     start=time.time()
     for word in WORDLIST:
         for a in algos:
             if hashlib.new(a,word.encode()).hexdigest()==target:
                 print()
-                ok(f"BULUNDU → {C.BOLD}{word}{C.RESET}  ({a}, {time.time()-start:.3f}s)")
+                ok(f"BULUNDU -> {C.BOLD}{word}{C.RESET}  ({a}, {time.time()-start:.3f}s)")
                 return
-    warn("Sözlükte yok.")
+    warn("Sozlukte yok.")
 
 def mod_password_strength():
     header("Password Strength Analyzer")
     try:
         import getpass
-        pw=getpass.getpass(f"{C.MAGENTA}[{USER_NAME}]{C.RESET} Şifre (gizli): ")
-    except Exception: pw=prompt("Şifre")
+        pw=getpass.getpass(f"{C.MAGENTA}[{USER_NAME}]{C.RESET} Sifre (gizli): ")
+    except Exception: pw=prompt("Sifre")
     if not pw: return
     score=0; fb=[]; n=len(pw)
     if n>=8: score+=1
     if n>=12: score+=1
     if n>=16: score+=1
-    else: fb.append("En az 16 karakter önerilir.")
+    else: fb.append("En az 16 karakter onerilir.")
     classes=0
     if any(c.islower() for c in pw): classes+=1
     if any(c.isupper() for c in pw): classes+=1
     if any(c.isdigit() for c in pw): classes+=1
     if any(not c.isalnum() for c in pw): classes+=1
     score+=classes
-    if classes<3: fb.append("Büyük/küçük harf, rakam ve sembol karıştır.")
+    if classes<3: fb.append("Buyuk/kucuk harf, rakam ve sembol karistir.")
     common=["password","123456","qwerty","admin","letmein","welcome"]
     if any(c in pw.lower() for c in common):
-        score-=2; fb.append("Yaygın kelime/desen içeriyor.")
+        score-=2; fb.append("Yaygin kelime/desen iceriyor.")
     import re
     if re.search(r"(.)\1{2,}",pw):
         score-=1; fb.append("Tekrarlanan karakter var.")
@@ -378,23 +378,23 @@ def mod_password_strength():
     entropy=n*math.log2(pool) if pool else 0
     if score<=2: rating,color="ZAYIF",C.RED
     elif score<=4: rating,color="ORTA",C.YELLOW
-    elif score<=6: rating,color="İYİ",C.GREEN
-    else: rating,color="GÜÇLÜ",C.GREEN+C.BOLD
+    elif score<=6: rating,color="IYI",C.GREEN
+    else: rating,color="GUCLU",C.GREEN+C.BOLD
     print()
     print(f"  Uzunluk      : {n}")
     print(f"  Karakter seti: {classes}/4")
     print(f"  Entropi      : ~{entropy:.1f} bit")
     print(f"  Puan         : {score}/7")
-    print(f"  Değerlendirme: {color}{rating}{C.RESET}")
+    print(f"  Degerlendirme: {color}{rating}{C.RESET}")
     if fb:
-        print(f"\n{C.BOLD}Öneriler:{C.RESET}")
-        for f in fb: print(f"  {C.YELLOW}•{C.RESET} {f}")
+        print(f"\n{C.BOLD}Oneriler:{C.RESET}")
+        for f in fb: print(f"  {C.YELLOW}*{C.RESET} {f}")
 
 def mod_encoder():
     header("Encoder / Decoder")
     print("  [1] B64 Encode  [2] B64 Decode  [3] Hex Encode  [4] Hex Decode")
     print("  [5] URL Encode  [6] URL Decode  [7] ROT13")
-    ch=prompt("Seçim"); text=prompt("Metin")
+    ch=prompt("Secim"); text=prompt("Metin")
     if not text: return
     try:
         if ch=="1": print(f"\n{C.GREEN}{base64.b64encode(text.encode()).decode()}{C.RESET}")
@@ -404,19 +404,19 @@ def mod_encoder():
         elif ch=="5": print(f"\n{C.GREEN}{urllib.parse.quote(text)}{C.RESET}")
         elif ch=="6": print(f"\n{C.GREEN}{urllib.parse.unquote(text)}{C.RESET}")
         elif ch=="7": print(f"\n{C.GREEN}{codecs.encode(text,'rot_13')}{C.RESET}")
-        else: err("Geçersiz.")
+        else: err("Gecersiz.")
     except Exception as e: err(f"Hata: {e}")
 
 def mod_ip_geo():
     header("IP Geolocation")
-    ip=prompt("IP (boş = kendin)")
+    ip=prompt("IP (bos = kendin)")
     if not ip:
         try:
             with urllib.request.urlopen("https://api.ipify.org",timeout=6) as r:
                 ip=r.read().decode().strip()
             info(f"Genel IP'n: {ip}")
-        except Exception as e: err(f"Alınamadı: {e}"); return
-    if not is_ip(ip): err("Geçersiz IP."); return
+        except Exception as e: err(f"Alinamadi: {e}"); return
+    if not is_ip(ip): err("Gecersiz IP."); return
     try:
         url=(f"http://ip-api.com/json/{ip}"
              "?fields=status,message,country,regionName,city,zip,lat,lon,"
@@ -424,10 +424,10 @@ def mod_ip_geo():
         with urllib.request.urlopen(url,timeout=8) as r:
             data=json.loads(r.read().decode())
         if data.get("status")!="success":
-            err(f"Başarısız: {data.get('message','?')}"); return
+            err(f"Basarisiz: {data.get('message','?')}"); return
         print()
-        for label,key in [("IP","query"),("Ülke","country"),("Bölge","regionName"),
-                          ("Şehir","city"),("Posta","zip"),("Enlem","lat"),
+        for label,key in [("IP","query"),("Ulke","country"),("Bolge","regionName"),
+                          ("Sehir","city"),("Posta","zip"),("Enlem","lat"),
                           ("Boylam","lon"),("Saat dilimi","timezone"),
                           ("ISP","isp"),("Org","org"),("AS","as")]:
             if data.get(key): print(f"  {C.CYAN}{label:<12}{C.RESET} {data[key]}")
@@ -435,13 +435,13 @@ def mod_ip_geo():
 
 def mod_ping_sweep():
     header("Host Discovery (TCP Ping)")
-    net=prompt("Ağ (örn 192.168.1.0/24)")
+    net=prompt("Ag (orn 192.168.1.0/24)")
     if not net: return
     try: network=ipaddress.ip_network(net,strict=False)
-    except ValueError: err("Geçersiz ağ."); return
+    except ValueError: err("Gecersiz ag."); return
     hosts=list(network.hosts())
     if not hosts: warn("Host yok."); return
-    if len(hosts)>1024: warn(f"{len(hosts)} host, uzun sürebilir.")
+    if len(hosts)>1024: warn(f"{len(hosts)} host, uzun surebilir.")
     probe_ports=[80,443,22,445,3389,8080]
     def probe(ip):
         s=str(ip)
@@ -452,14 +452,277 @@ def mod_ping_sweep():
                     if sock.connect_ex((s,p))==0: return s, p
             except Exception: continue
         return None
-    ok(f"{len(hosts)} host taranıyor..."); alive=[]
+    ok(f"{len(hosts)} host taraniyor..."); alive=[]
     with ThreadPoolExecutor(max_workers=100) as ex:
         for res in ex.map(probe,hosts):
             if res:
                 alive.append(res)
                 print(f"  {C.GREEN}[CANLI]{C.RESET} {res[0]}  {C.DIM}(port {res[1]}){C.RESET}")
     print()
-    ok(f"{len(alive)} canlı host.")
+    ok(f"{len(alive)} canli host.")
+
+def mod_mac_vendor():
+    header("MAC Vendor Lookup")
+    mac = prompt("MAC (00:1A:2B:3C:4D:5E)")
+    mac = mac.replace("-","").replace(":","").replace(".","").upper()
+    if len(mac) < 6: err("Gecersiz MAC."); return
+    oui = mac[:6]
+    try:
+        url = f"https://api.macvendors.com/{oui}"
+        req = urllib.request.Request(url, headers={"User-Agent": f"SentinelX/{VERSION}"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            vendor = r.read().decode(errors="ignore").strip()
+            ok(f"OUI {oui} -> {vendor}")
+    except urllib.error.HTTPError as e:
+        if e.code == 404: warn("Bu OUI icin uretici bulunamadi.")
+        else: err(f"API hatasi: {e.code}")
+    except Exception as e:
+        err(f"Hata: {e}")
+
+def mod_http_methods():
+    header("HTTP Method Tester")
+    url = prompt("URL")
+    if not url: return
+    if not url.startswith(("http://","https://")): url = "http://" + url
+    methods = ["GET","POST","PUT","DELETE","OPTIONS","HEAD","PATCH","TRACE"]
+    for m in methods:
+        try:
+            req = urllib.request.Request(url, method=m,
+                headers={"User-Agent": f"SentinelX/{VERSION}"})
+            with urllib.request.urlopen(req, timeout=6) as r:
+                code = r.status
+                color = C.GREEN if code < 300 else C.YELLOW
+                print(f"  {color}{m:<8}{C.RESET} {code} {r.reason}")
+                if m == "OPTIONS":
+                    allow = r.headers.get("Allow", "")
+                    if allow: info(f"Allow: {allow}")
+        except urllib.error.HTTPError as e:
+            color = C.RED if e.code >= 400 else C.YELLOW
+            print(f"  {color}{m:<8}{C.RESET} {e.code} {e.reason}")
+        except Exception as e:
+            print(f"  {C.DIM}{m:<8} hata{C.RESET}")
+
+def mod_tech_finger():
+    header("Technology Fingerprinter")
+    url = prompt("URL")
+    if not url: return
+    if not url.startswith(("http://","https://")): url = "http://" + url
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": f"SentinelX/{VERSION}"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            headers = {k.lower(): v for k, v in r.headers.items()}
+            body = r.read(200000).decode(errors="ignore").lower()
+            found = []
+            if "server" in headers: found.append(f"Server: {headers['server']}")
+            if "x-powered-by" in headers: found.append(f"X-Powered-By: {headers['x-powered-by']}")
+            if "x-aspnet-version" in headers: found.append(f"ASP.NET {headers['x-aspnet-version']}")
+            sigs = [
+                ("WordPress", ["wp-content","wp-includes","/wp-json/"]),
+                ("Joomla", ["/components/com_","joomla"]),
+                ("Drupal", ["drupal","sites/default/files"]),
+                ("React", ["data-reactroot","react-dom","_react"]),
+                ("Vue.js", ["vue.min.js","v-cloak","vue.js"]),
+                ("Angular", ["ng-version","angular.min.js"]),
+                ("jQuery", ["jquery.min.js","jquery.js"]),
+                ("Bootstrap", ["bootstrap.min.css","bootstrap.min.js"]),
+                ("Cloudflare", ["cloudflare"]),
+                ("nginx", ["nginx"]),
+                ("Apache", ["apache"]),
+                ("PHP", ["php"]),
+            ]
+            for name, keys in sigs:
+                if any(k in body for k in keys): found.append(name)
+            print()
+            if found:
+                for f in found: ok(f)
+            else: warn("Belirgin teknoloji bulunamadi.")
+    except Exception as e:
+        err(f"Hata: {e}")
+
+def mod_jwt_decode():
+    header("JWT Decoder")
+    token = prompt("JWT token")
+    if not token: return
+    parts = token.split(".")
+    if len(parts) != 3: err("Gecersiz JWT (3 kisim olmali)."); return
+    def b64d(s):
+        s += "=" * (-len(s) % 4)
+        return base64.urlsafe_b64decode(s).decode(errors="ignore")
+    try:
+        hdr = json.loads(b64d(parts[0]))
+        pld = json.loads(b64d(parts[1]))
+        print(f"\n{C.BOLD}Header:{C.RESET}")
+        print(json.dumps(hdr, indent=2, ensure_ascii=False))
+        print(f"\n{C.BOLD}Payload:{C.RESET}")
+        print(json.dumps(pld, indent=2, ensure_ascii=False))
+        print(f"\n{C.BOLD}Signature:{C.RESET} {C.DIM}{parts[2]}{C.RESET}")
+        if str(hdr.get("alg","")).lower() == "none":
+            print()
+            warn("KRITIK: alg=none -> dogrulama yok, guvenlik acigi!")
+    except Exception as e:
+        err(f"Decode hatasi: {e}")
+
+def mod_pass_gen():
+    header("Password Generator")
+    try: length = int(prompt("Uzunluk [20]") or "20")
+    except ValueError: length = 20
+    length = max(4, min(length, 256))
+    print(f"{C.DIM}  [1] Harf+rakam  [2] Tum semboller  [3] Kolay okunur{C.RESET}")
+    ch = prompt("Secim [2]") or "2"
+    import secrets
+    if ch == "1":
+        alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    elif ch == "3":
+        alpha = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    else:
+        alpha = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{};:,.<>/?"
+    try: count = int(prompt("Kac adet [5]") or "5")
+    except ValueError: count = 5
+    print()
+    for _ in range(count):
+        pw = "".join(secrets.choice(alpha) for _ in range(length))
+        print(f"  {C.GREEN}{pw}{C.RESET}")
+
+def mod_waf_detect():
+    header("WAF Detection")
+    url = prompt("URL")
+    if not url: return
+    if not url.startswith(("http://","https://")): url = "http://" + url
+    payload = url + "/?q=<script>alert(1)</script>' OR '1'='1"
+    try:
+        req = urllib.request.Request(payload, headers={"User-Agent": f"SentinelX/{VERSION}"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            code = r.status
+            hdrs = {k.lower(): v for k, v in r.headers.items()}
+            body = r.read(50000).decode(errors="ignore").lower()
+    except urllib.error.HTTPError as e:
+        code = e.code
+        hdrs = {k.lower(): v for k, v in e.headers.items()}
+        try: body = e.read(50000).decode(errors="ignore").lower()
+        except Exception: body = ""
+    except Exception as e:
+        err(f"Hata: {e}"); return
+    info(f"Yanit kodu: {code}")
+    wafs = {
+        "Cloudflare": ["cloudflare","cf-ray"],
+        "AWS WAF": ["awselb","x-amz"],
+        "Sucuri": ["sucuri","x-sucuri"],
+        "Akamai": ["akamai","akamaighost"],
+        "Imperva/Incapsula": ["incap_ses","visid_incap","x-iinfo"],
+        "F5 BIG-IP": ["bigip"],
+        "ModSecurity": ["mod_security","modsecurity"],
+        "Barracuda": ["barracuda","barra"],
+        "Wordfence": ["wordfence"],
+        "Fortinet": ["fortiweb","fortigate"],
+    }
+    alltxt = " ".join(hdrs.keys()) + " " + " ".join(str(v) for v in hdrs.values()) + " " + body
+    found = [n for n, sigs in wafs.items() if any(s in alltxt for s in sigs)]
+    print()
+    if found:
+        for f in found: ok(f"Muhtemel WAF: {f}")
+    else: warn("Bilinen WAF imzasi bulunamadi.")
+    if code in (403, 406):
+        info("403/406 -> buyuk ihtimalle WAF engelledi.")
+
+def mod_redirect_chain():
+    header("Redirect Chain")
+    url = prompt("URL")
+    if not url: return
+    if not url.startswith(("http://","https://")): url = "http://" + url
+    class NoRedir(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            return None
+    opener = urllib.request.build_opener(NoRedir)
+    current = url; seen = set()
+    for i in range(15):
+        if current in seen:
+            warn("Dongu algilandi."); break
+        seen.add(current)
+        try:
+            req = urllib.request.Request(current, headers={"User-Agent": f"SentinelX/{VERSION}"})
+            with opener.open(req, timeout=10) as r:
+                print(f"  {C.GREEN}[{i+1}]{C.RESET} {r.status} {current}")
+                break
+        except urllib.error.HTTPError as e:
+            if e.code in (301,302,303,307,308):
+                loc = e.headers.get("Location", "")
+                print(f"  {C.YELLOW}[{i+1}]{C.RESET} {e.code} {current}")
+                print(f"      {C.DIM}-> {loc}{C.RESET}")
+                if loc.startswith("/"):
+                    p = urllib.parse.urlparse(current)
+                    current = f"{p.scheme}://{p.netloc}{loc}"
+                else: current = loc
+            else:
+                print(f"  {C.RED}[{i+1}]{C.RESET} {e.code} {current}")
+                break
+        except Exception as e:
+            err(f"Hata: {e}"); break
+
+def mod_email_harvest():
+    header("Email Harvester")
+    url = prompt("URL")
+    if not url: return
+    if not url.startswith(("http://","https://")): url = "http://" + url
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": f"SentinelX/{VERSION}"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            html = r.read(500000).decode(errors="ignore")
+        import re
+        emails = set(re.findall(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", html))
+        emails = {e for e in emails if not e.lower().endswith((".png",".jpg",".gif",".css",".js"))}
+        print()
+        if emails:
+            ok(f"{len(emails)} e-posta bulundu:")
+            for e in sorted(emails): print(f"    {C.CYAN}{e}{C.RESET}")
+        else: warn("E-posta bulunamadi.")
+    except Exception as e:
+        err(f"Hata: {e}")
+
+def mod_robots():
+    header("robots.txt / sitemap.xml")
+    url = prompt("URL").rstrip("/")
+    if not url: return
+    if not url.startswith(("http://","https://")): url = "http://" + url
+    for path in ["/robots.txt", "/sitemap.xml"]:
+        full = url + path
+        try:
+            req = urllib.request.Request(full, headers={"User-Agent": f"SentinelX/{VERSION}"})
+            with urllib.request.urlopen(req, timeout=8) as r:
+                body = r.read(50000).decode(errors="ignore")
+                ok(f"{full}  ({r.status})")
+                print(f"{C.DIM}{'-'*62}{C.RESET}")
+                print(body[:3000])
+                if len(body) > 3000: print(f"{C.DIM}...(+{len(body)-3000} karakter){C.RESET}")
+                print(f"{C.DIM}{'-'*62}{C.RESET}")
+        except urllib.error.HTTPError as e:
+            warn(f"{full} -> {e.code}")
+        except Exception as e:
+            warn(f"{full} -> hata")
+
+def mod_ssl_versions():
+    header("SSL/TLS Version Scanner")
+    host = prompt("Host")
+    if not host: return
+    try: port = int(prompt("Port [443]") or "443")
+    except ValueError: port = 443
+    versions = [
+        ("TLS 1.3", ssl.TLSVersion.TLSv1_3),
+        ("TLS 1.2", ssl.TLSVersion.TLSv1_2),
+        ("TLS 1.1", ssl.TLSVersion.TLSv1_1),
+        ("TLS 1.0", ssl.TLSVersion.TLSv1),
+    ]
+    for name, ver in versions:
+        try:
+            ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            ctx.minimum_version = ver
+            ctx.maximum_version = ver
+            with socket.create_connection((host, port), timeout=6) as sock:
+                with ctx.wrap_socket(sock, server_hostname=host) as ss:
+                    ok(f"{name} -> DESTEKLENIYOR ({ss.version()})")
+        except Exception:
+            warn(f"{name} -> desteklenmiyor")
 
 MENU=[
     ("Port Scanner",              mod_port_scanner),
@@ -476,39 +739,49 @@ MENU=[
     ("Encoder / Decoder",         mod_encoder),
     ("IP Geolocation",            mod_ip_geo),
     ("Host Discovery (TCP Ping)", mod_ping_sweep),
+    ("MAC Vendor Lookup",         mod_mac_vendor),
+    ("HTTP Method Tester",        mod_http_methods),
+    ("Tech Fingerprinter",        mod_tech_finger),
+    ("JWT Decoder",               mod_jwt_decode),
+    ("Password Generator",        mod_pass_gen),
+    ("WAF Detection",             mod_waf_detect),
+    ("Redirect Chain",            mod_redirect_chain),
+    ("Email Harvester",           mod_email_harvest),
+    ("robots.txt / sitemap.xml",  mod_robots),
+    ("SSL/TLS Version Scanner",   mod_ssl_versions),
 ]
 
 def print_menu():
     clear(); print(BANNER)
-    print(f"{C.DIM}{'─'*62}{C.RESET}")
+    print(f"{C.DIM}{'-'*62}{C.RESET}")
     for i,(name,_) in enumerate(MENU,1):
         print(f"  {C.MAGENTA}[{i:>2}]{C.RESET}  {name}")
-    print(f"  {C.RED}[ 0]{C.RESET}  Çıkış")
-    print(f"{C.DIM}{'─'*62}{C.RESET}")
+    print(f"  {C.RED}[ 0]{C.RESET}  Cikis")
+    print(f"{C.DIM}{'-'*62}{C.RESET}")
 
 def main():
     clear(); print(BANNER)
-    print(f"{C.GREEN}Hoş geldin, {C.BOLD}{USER_NAME}{C.RESET}{C.GREEN}. "
-          f"SentinelX v{VERSION} hazır.{C.RESET}")
-    print(f"{C.DIM}Yalnızca yetkili olduğun sistemlerde kullan.{C.RESET}")
-    try: input(f"\n{C.DIM}Başlamak için Enter...{C.RESET}")
+    print(f"{C.GREEN}Hos geldin, {C.BOLD}{USER_NAME}{C.RESET}{C.GREEN}. "
+          f"SentinelX v{VERSION} hazir.{C.RESET}")
+    print(f"{C.DIM}Yalnizca yetkili oldugun sistemlerde kullan.{C.RESET}")
+    try: input(f"\n{C.DIM}Baslamak icin Enter...{C.RESET}")
     except (KeyboardInterrupt, EOFError): return
     while True:
         print_menu()
-        try: ch=input(f"\n{C.MAGENTA}[{USER_NAME}]{C.RESET} Seçim: ").strip()
+        try: ch=input(f"\n{C.MAGENTA}[{USER_NAME}]{C.RESET} Secim: ").strip()
         except (KeyboardInterrupt, EOFError): print(); break
         if ch=="0": break
-        if not ch.isdigit(): warn("Geçersiz."); time.sleep(1); continue
+        if not ch.isdigit(): warn("Gecersiz."); time.sleep(1); continue
         idx=int(ch)
         if 1<=idx<=len(MENU):
             name,func=MENU[idx-1]
             try: func()
-            except KeyboardInterrupt: warn("İptal.")
+            except KeyboardInterrupt: warn("Iptal.")
             except Exception as e: err(f"Hata: {e}")
             pause()
-        else: warn("Geçersiz."); time.sleep(1)
-    print(f"\n{C.CYAN}Görüşürüz, {C.BOLD}{USER_NAME}{C.RESET}{C.CYAN}.{C.RESET}\n")
+        else: warn("Gecersiz."); time.sleep(1)
+    print(f"\n{C.CYAN}Gorusuruz, {C.BOLD}{USER_NAME}{C.RESET}{C.CYAN}.{C.RESET}\n")
 
 if __name__=="__main__":
     try: main()
-    except KeyboardInterrupt: print(f"\n{C.YELLOW}Çıkılıyor...{C.RESET}")
+    except KeyboardInterrupt: print(f"\n{C.YELLOW}Cikiliyor...{C.RESET}")
