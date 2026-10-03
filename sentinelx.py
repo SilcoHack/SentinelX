@@ -724,6 +724,160 @@ def mod_ssl_versions():
         except Exception:
             warn(f"{name} -> desteklenmiyor")
 
+def mod_site_osint():
+    header("Site OSINT - Kapsamli Analiz")
+    t = prompt("URL veya Domain (orn example.com)")
+    if not t: return
+    t = t.strip().lower()
+    if "://" in t: t = urllib.parse.urlparse(t).netloc
+    t = t.split("/")[0].split(":")[0]
+    if not t: err("Gecersiz hedef."); return
+    info(f"Hedef: {t}")
+    print()
+    print(f"{C.BOLD}{C.CYAN}>> 1. DNS Cozumleme{C.RESET}")
+    ip = None
+    try:
+        ip = socket.gethostbyname(t)
+        ok(f"A kaydi: {ip}")
+        try:
+            host, aliases, ips = socket.gethostbyname_ex(t)
+            if aliases: info(f"Aliases: {', '.join(aliases)}")
+            for i in ips:
+                if i != ip: info(f"Ek IP: {i}")
+        except Exception: pass
+    except socket.gaierror:
+        err("DNS cozumlenemedi.")
+    print()
+    if ip:
+        print(f"{C.BOLD}{C.CYAN}>> 2. IP Konum Bilgisi{C.RESET}")
+        try:
+            url = f"http://ip-api.com/json/{ip}?fields=status,country,regionName,city,isp,org,as,timezone"
+            with urllib.request.urlopen(url, timeout=8) as r:
+                data = json.loads(r.read().decode())
+            if data.get("status") == "success":
+                for label, key in [("Ulke","country"),("Bolge","regionName"),("Sehir","city"),
+                                   ("ISP","isp"),("Org","org"),("AS","as"),("Saat dilimi","timezone")]:
+                    if data.get(key): print(f"  {C.CYAN}{label:<12}{C.RESET} {data[key]}")
+            else: warn("Geo bilgisi alinamadi.")
+        except Exception as e: warn(f"Geo hatasi: {e}")
+        print()
+    print(f"{C.BOLD}{C.CYAN}>> 3. WHOIS Bilgisi{C.RESET}")
+    try:
+        iana = _whois_query("whois.iana.org", t)
+        if iana:
+            refer = None
+            for line in iana.splitlines():
+                if line.lower().startswith("refer:"):
+                    refer = line.split(":", 1)[1].strip(); break
+            if refer:
+                result = _whois_query(refer, t)
+                if result:
+                    interesting = ["registrar:", "creation date:", "expiry date:", "updated date:",
+                                   "name server:", "registrant", "org:", "country:", "status:"]
+                    shown = 0
+                    for line in result.splitlines():
+                        ll = line.lower()
+                        if any(k in ll for k in interesting):
+                            print(f"  {C.DIM}{line.strip()}{C.RESET}")
+                            shown += 1
+                            if shown > 20: break
+                    if shown == 0: info("Modul 3 (WHOIS) tam detay verir.")
+                else: warn("WHOIS sunucusundan yanit yok.")
+            else: warn("Referans sunucu bulunamadi.")
+        else: warn("IANA yanit vermedi.")
+    except Exception as e: warn(f"WHOIS hatasi: {e}")
+    print()
+    print(f"{C.BOLD}{C.CYAN}>> 4. Subdomain Taramasi{C.RESET}")
+    try:
+        def check(sub):
+            fqdn = f"{sub}.{t}"
+            try: return fqdn, socket.gethostbyname(fqdn)
+            except socket.gaierror: return None
+        found = []
+        with ThreadPoolExecutor(max_workers=30) as ex:
+            for res in ex.map(check, SUBDOMAINS):
+                if res: found.append(res)
+        if found:
+            ok(f"{len(found)} subdomain bulundu:")
+            for fqdn, ip_ in found[:15]:
+                print(f"    {C.GREEN}{fqdn}{C.RESET} -> {ip_}")
+            if len(found) > 15: info(f"...(+{len(found)-15} daha)")
+        else: warn("Subdomain bulunamadi.")
+    except Exception as e: warn(f"Subdomain hatasi: {e}")
+    print()
+    print(f"{C.BOLD}{C.CYAN}>> 5. HTTP Basliklari{C.RESET}")
+    http_url = f"https://{t}"
+    try:
+        req = urllib.request.Request(http_url, headers={"User-Agent": f"SentinelX/{VERSION}"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            ok(f"Durum: {r.status} {r.reason}")
+            keys = ["server","x-powered-by","content-type","strict-transport-security",
+                    "content-security-policy","x-frame-options","x-content-type-options"]
+            hl = {k.lower(): v for k, v in r.headers.items()}
+            for h in keys:
+                if h in hl: print(f"  {C.CYAN}{h}:{C.RESET} {hl[h]}")
+    except urllib.error.HTTPError as e: info(f"HTTP {e.code}")
+    except Exception as e: warn(f"HTTP hatasi: {e}")
+    print()
+    print(f"{C.BOLD}{C.CYAN}>> 6. SSL Sertifikasi{C.RESET}")
+    try:
+        ctx = ssl.create_default_context()
+        with socket.create_connection((t, 443), timeout=10) as sock:
+            with ctx.wrap_socket(sock, server_hostname=t) as ss:
+                cert = ss.getpeercert()
+                ok(f"Protokol: {ss.version()}")
+                subj = dict(x[0] for x in cert.get("subject", ()))
+                iss = dict(x[0] for x in cert.get("issuer", ()))
+                print(f"  {C.CYAN}Subject:{C.RESET} {subj.get('commonName','?')}")
+                print(f"  {C.CYAN}Issuer :{C.RESET} {iss.get('organizationName', iss.get('commonName','?'))}")
+                print(f"  {C.CYAN}Gecerlilik:{C.RESET} {cert.get('notBefore','?')} -> {cert.get('notAfter','?')}")
+    except ssl.SSLCertVerificationError:
+        warn("SSL dogrulanamadi (self-signed/expired).")
+    except Exception as e: warn(f"SSL hatasi: {e}")
+    print()
+    print(f"{C.BOLD}{C.CYAN}>> 7. robots.txt{C.RESET}")
+    try:
+        req = urllib.request.Request(f"https://{t}/robots.txt", headers={"User-Agent": f"SentinelX/{VERSION}"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            body = r.read(5000).decode(errors="ignore")
+            ok(f"robots.txt bulundu ({len(body)} karakter)")
+            for line in body.splitlines()[:8]:
+                if line.strip(): print(f"  {C.DIM}{line.strip()}{C.RESET}")
+    except urllib.error.HTTPError as e: warn(f"robots.txt -> {e.code}")
+    except Exception: warn("robots.txt alinamadi.")
+    print()
+    print(f"{C.BOLD}{C.CYAN}>> 8. Teknoloji Tespiti{C.RESET}")
+    try:
+        req = urllib.request.Request(http_url, headers={"User-Agent": f"SentinelX/{VERSION}"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            headers = {k.lower(): v for k, v in r.headers.items()}
+            body = r.read(200000).decode(errors="ignore").lower()
+            found_tech = []
+            if "server" in headers: found_tech.append(f"Server: {headers['server']}")
+            if "x-powered-by" in headers: found_tech.append(f"X-Powered-By: {headers['x-powered-by']}")
+            sigs = [
+                ("WordPress", ["wp-content","wp-includes","/wp-json/"]),
+                ("Joomla", ["/components/com_","joomla"]),
+                ("Drupal", ["drupal","sites/default/files"]),
+                ("React", ["data-reactroot","react-dom","_react"]),
+                ("Vue.js", ["vue.min.js","v-cloak","vue.js"]),
+                ("Angular", ["ng-version","angular.min.js"]),
+                ("jQuery", ["jquery.min.js","jquery.js"]),
+                ("Bootstrap", ["bootstrap.min.css","bootstrap.min.js"]),
+                ("Cloudflare", ["cloudflare"]),
+                ("nginx", ["nginx"]),
+                ("Apache", ["apache"]),
+                ("PHP", ["php"]),
+            ]
+            for name, keys in sigs:
+                if any(k in body for k in keys): found_tech.append(name)
+            if found_tech:
+                for f in found_tech: ok(f)
+            else: warn("Belirgin teknoloji bulunamadi.")
+    except Exception as e: warn(f"Teknoloji tespiti hatasi: {e}")
+    print()
+    ok(f"Site OSINT tamamlandi: {t}")
+
 MENU=[
     ("Port Scanner",              mod_port_scanner),
     ("DNS Lookup",                mod_dns_lookup),
@@ -749,6 +903,7 @@ MENU=[
     ("Email Harvester",           mod_email_harvest),
     ("robots.txt / sitemap.xml",  mod_robots),
     ("SSL/TLS Version Scanner",   mod_ssl_versions),
+    ("Site OSINT (Kapsamli)",     mod_site_osint),
 ]
 
 def print_menu():
